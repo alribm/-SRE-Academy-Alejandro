@@ -2074,6 +2074,8 @@ Durante el programa, desarrollé varios scripts de automatización para facilita
 ### Script 1: apply-all-services.sh
 <img src="images/script-1.png" width="600"/>
 
+**Archivo:** [`scripts/apply-all-services.sh`](scripts/apply-all-services.sh)
+
 **Descripción:**
 Este script automatiza el inicio de servicios en un clúster de Kubernetes aplicando distintos manifiestos en un orden lógico. Se encarga de desplegar almacenamiento, la aplicación base y varias herramientas de observabilidad y monitoreo (Jaeger, Prometheus, Grafana, Loki/Promtail). Al final muestra un mensaje confirmando que todos los manifiestos fueron aplicados correctamente
 
@@ -2098,6 +2100,8 @@ Este script automatiza el inicio de servicios en un clúster de Kubernetes aplic
 
 ### Script 2: stop-all-services.sh
 <img src="images/script-2.png" width="600"/>
+
+**Archivo:** [`scripts/stop-all-services.sh`](scripts/stop-all-services.sh)
 
 **Descripción:** El script automatiza el apagado de servicios desplegados en Kubernetes y la gestión del entorno de Minikube. Primero elimina los manifiestos aplicados (storage, deployment, Jaeger, Prometheus, Grafana, Loki/Promtail), espera unos segundos para liberar recursos y luego ofrece confirmaciones interactivas para detener o eliminar Minikube.
 
