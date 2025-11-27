@@ -1,0 +1,235 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alert-rules
+  namespace: default
+data:
+  alert-rules.yml: |
+    groups:
+      # Golden Signals: Latency Alerts
+      - name: latency-alerts
+        interval: 30s
+        rules:
+          - alert: HighLatency
+            expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, method, endpoint)) > 0.5
+            for: 2m
+            labels:
+              severity: warning
+              type: golden-signal
+              signal: latency
+            annotations:
+              summary: "High latency detected on {{ $labels.endpoint }}"
+              description: "95th percentile latency is {{ $value }}s for {{ $labels.method }} {{ $labels.endpoint }}"
+          
+          - alert: CriticalLatency
+            expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, method, endpoint)) > 1.0
+            for: 1m
+            labels:
+              severity: critical
+              type: golden-signal
+              signal: latency
+            annotations:
+              summary: "Critical latency on {{ $labels.endpoint }}"
+              description: "99th percentile latency is {{ $value }}s for {{ $labels.method }} {{ $labels.endpoint }}"
+          
+          - alert: SpanDurationHigh
+            expr: sum(rate(otel_collector_span_metrics_duration_milliseconds_sum[5m])) / sum(rate(otel_collector_span_metrics_duration_milliseconds_count[5m])) > 500
+            for: 3m
+            labels:
+              severity: warning
+              type: golden-signal
+              signal: latency
+            annotations:
+              summary: "High average span duration detected"
+              description: "Average span duration is {{ $value }}ms"
+      
+      # Golden Signals: Traffic Alerts
+      - name: traffic-alerts
+        interval: 30s
+        rules:
+          - alert: TrafficSpike
+            expr: sum(rate(http_requests_total[5m])) by (service) > 1000
+            for: 2m
+            labels:
+              severity: warning
+              type: golden-signal
+              signal: traffic
+            annotations:
+              summary: "Traffic spike detected on {{ $labels.service }}"
+              description: "Request rate is {{ $value }} req/s"
+          
+          - alert: TrafficDrop
+            expr: sum(rate(http_requests_total[5m])) by (service) < 10
+            for: 5m
+            labels:
+              severity: warning
+              type: golden-signal
+              signal: traffic
+            annotations:
+              summary: "Traffic drop detected on {{ $labels.service }}"
+              description: "Request rate is only {{ $value }} req/s"
+          
+          - alert: NetworkTrafficAbnormal
+            expr: sum(rate(container_network_receive_bytes_total[5m])) by (pod) > 10485760
+            for: 5m
+            labels:
+              severity: warning
+              type: golden-signal
+              signal: traffic
+            annotations:
+              summary: "Abnormal network traffic on {{ $labels.pod }}"
+              description: "Network receive rate is {{ $value }} bytes/s"
+      
+      # Golden Signals: Error Alerts
+      - name: error-alerts
+        interval: 30s
+        rules:
+          - alert: HighErrorRate
+            expr: sum(rate(http_requests_total{status=~"5.."}[5m])) by (service, endpoint) / sum(rate(http_requests_total[5m])) by (service, endpoint) > 0.05
+            for: 2m
+            labels:
+              severity: critical
+              type: golden-signal
+              signal: errors
+            annotations:
+              summary: "High error rate on {{ $labels.service }}{{ $labels.endpoint }}"
+              description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+          
+          - alert: NetworkErrors
+            expr: sum(rate(container_network_receive_errors_total[5m])) by (pod) > 10
+            for: 3m
+            labels:
+              severity: warning
+              type: golden-signal
+              signal: errors
+            annotations:
+              summary: "Network errors detected on {{ $labels.pod }}"
+              description: "Network error rate is {{ $value }} errors/s"
+          
+          - alert: ApplicationErrors
+            expr: sum(rate(http_requests_total{status=~"4.."}[5m])) by (service, endpoint) > 50
+            for: 5m
+            labels:
+              severity: warning
+              type: golden-signal
+              signal: errors
+            annotations:
+              summary: "High 4xx error count on {{ $labels.service }}{{ $labels.endpoint }}"
+              description: "Client error rate is {{ $value }} req/s"
+      
+      # Golden Signals: Saturation Alerts
+      - name: saturation-alerts
+        interval: 30s
+        rules:
+          - alert: HighCPUUsage
+            expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (pod, namespace) > 0.8
+            for: 5m
+            labels:
+              severity: warning
+              type: golden-signal
+              signal: saturation
+            annotations:
+              summary: "High CPU usage on {{ $labels.namespace }}/{{ $labels.pod }}"
+              description: "CPU usage is {{ $value | humanize }} cores (threshold: 0.8 cores)"
+          
+          - alert: CriticalCPUUsage
+            expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (pod, namespace) > 1.5
+            for: 2m
+            labels:
+              severity: critical
+              type: golden-signal
+              signal: saturation
+            annotations:
+              summary: "Critical CPU usage on {{ $labels.namespace }}/{{ $labels.pod }}"
+              description: "CPU usage is {{ $value | humanize }} cores (threshold: 1.5 cores)"
+          
+          - alert: HighMemoryUsage
+            expr: sum(container_memory_usage_bytes) by (pod, namespace) > 536870912
+            for: 5m
+            labels:
+              severity: warning
+              type: golden-signal
+              signal: saturation
+            annotations:
+              summary: "High memory usage on {{ $labels.namespace }}/{{ $labels.pod }}"
+              description: "Memory usage is {{ $value | humanize1024 }} (threshold: 512MB)"
+          
+          - alert: CriticalMemoryUsage
+            expr: sum(container_memory_usage_bytes) by (pod, namespace) > 805306368
+            for: 2m
+            labels:
+              severity: critical
+              type: golden-signal
+              signal: saturation
+            annotations:
+              summary: "Critical memory usage on {{ $labels.namespace }}/{{ $labels.pod }}"
+              description: "Memory usage is {{ $value | humanize1024 }} (threshold: 768MB)"
+          
+          - alert: HighDiskUsage
+            expr: sum(rate(container_fs_writes_bytes_total[5m])) by (pod) > 10485760
+            for: 5m
+            labels:
+              severity: warning
+              type: golden-signal
+              signal: saturation
+            annotations:
+              summary: "High disk I/O on {{ $labels.pod }}"
+              description: "Disk write rate is {{ $value | humanize }} bytes/s"
+      
+      # Infrastructure Alerts
+      - name: infrastructure-alerts
+        interval: 30s
+        rules:
+          - alert: PodDown
+            expr: kube_pod_status_phase{phase!="Running"} == 1
+            for: 3m
+            labels:
+              severity: critical
+              type: infrastructure
+            annotations:
+              summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is not running"
+              description: "Pod is in {{ $labels.phase }} state"
+          
+          - alert: PodRestarting
+            expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+            for: 5m
+            labels:
+              severity: warning
+              type: infrastructure
+            annotations:
+              summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is restarting"
+              description: "Pod has restarted {{ $value }} times in the last 15 minutes"
+          
+          - alert: ServiceDown
+            expr: up{job="kubernetes-service-endpoints"} == 0
+            for: 2m
+            labels:
+              severity: critical
+              type: infrastructure
+            annotations:
+              summary: "Service {{ $labels.service }} is down"
+              description: "Service has been unreachable for 2 minutes"
+      
+      # Custom Application Metrics Alerts
+      - name: application-alerts
+        interval: 30s
+        rules:
+          - alert: HighGooFunctionCalls
+            expr: rate(goo_function_calls_total[5m]) > 100
+            for: 3m
+            labels:
+              severity: warning
+              type: application
+            annotations:
+              summary: "High GOO function call rate"
+              description: "GOO function is being called {{ $value }} times/s"
+          
+          - alert: ZeroRequests
+            expr: sum(http_requests_total) by (service) == 0
+            for: 10m
+            labels:
+              severity: warning
+              type: application
+            annotations:
+              summary: "No requests received by {{ $labels.service }}"
+              description: "Service has not received any requests in 10 minutes"

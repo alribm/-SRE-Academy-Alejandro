@@ -1,0 +1,146 @@
+# Kubernetes Deployment for SRE Academy Training Application
+# Includes: Namespace, Deployment, Service, PVC, CronJob for load testing
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: application
+  labels:
+    name: application
+    monitoring: enabled
+
+---
+# Application Deployment with Prometheus annotations
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sre-abc-training-app
+  namespace: application
+  labels:
+    app: sre-abc-training-app
+    version: v1
+spec:
+  replicas: 3  # High availability with 3 replicas
+  selector:
+    matchLabels:
+      app: sre-abc-training-app
+  template:
+    metadata:
+      labels:
+        app: sre-abc-training-app
+        version: v1
+      annotations:
+        # Prometheus scrape configuration
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: sre-abc-training-app
+        image: sre-abc-training-python-app:amd64
+        imagePullPolicy: Never  # Use local image (Minikube)
+        ports:
+        - containerPort: 5000
+          name: http
+          protocol: TCP
+        # Resource limits for responsible resource usage
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        # Liveness probe: restart if unhealthy
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        # Readiness probe: don't send traffic until ready
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        # Mount shared volume for logs
+        volumeMounts:
+        - name: log-volume
+          mountPath: /app/logs
+      volumes:
+      - name: log-volume
+        persistentVolumeClaim:
+          claimName: log-pvc
+
+---
+# Persistent Volume Claim for application logs
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: log-pvc
+  namespace: application
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+  storageClassName: ""
+  volumeName: log-pv-1  # Bind to pre-created PV
+
+---
+# Service to expose the application
+apiVersion: v1
+kind: Service
+metadata:
+  name: sre-abc-training-service
+  namespace: application
+  labels:
+    app: sre-abc-training-app
+  annotations:
+    # Prometheus service-level scraping
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "5000"
+    prometheus.io/path: "/metrics"
+spec:
+  type: NodePort
+  selector:
+    app: sre-abc-training-app
+  ports:
+  - port: 5000
+    targetPort: 5000
+    nodePort: 30007
+    protocol: TCP
+    name: http
+
+---
+# CronJob for automated load testing (generates traffic every minute)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: store-caller
+  namespace: application
+  labels:
+    app: load-generator
+spec:
+  schedule: "*/1 * * * *"  # Every 1 minute
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: curl-container
+            image: curlimages/curl:7.85.0
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                # Call /store endpoint 6 times with 1s delay
+                for i in 1 2 3 4 5 6; do
+                  curl -s http://sre-abc-training-service.application.svc.cluster.local:5000/store
+                  sleep 1
+                done
+          restartPolicy: Never

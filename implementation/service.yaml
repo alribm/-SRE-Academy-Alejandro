@@ -1,0 +1,26 @@
+# Kubernetes Service for SRE Academy Training Application
+# Simple NodePort service for external access
+apiVersion: v1
+kind: Service
+metadata:
+  name: sre-abc-training-service
+  namespace: application
+  labels:
+    app: sre-abc-training-app
+    component: backend
+  annotations:
+    # Enable Prometheus scraping via service discovery
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "5000"
+    prometheus.io/path: "/metrics"
+spec:
+  type: NodePort
+  selector:
+    app: sre-abc-training-app
+  ports:
+  - port: 5000        # Service port (ClusterIP)
+    targetPort: 5000  # Container port
+    nodePort: 30007   # External port (accessible via Minikube IP)
+    protocol: TCP
+    name: http
+  sessionAffinity: None

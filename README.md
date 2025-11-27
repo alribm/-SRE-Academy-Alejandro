@@ -136,6 +136,72 @@ El SRE Academy es una iniciativa interna de IBM diseñada para formar profesiona
 
 ---
 
+## 📁 Artefactos de Implementación
+
+> **Para el Instructor:** Todos los artefactos requeridos están organizados en el directorio [`/implementation`](implementation/) con un README detallado que mapea cada archivo a los requisitos del proyecto. Ver [`implementation/README.md`](implementation/README.md) para la documentación completa.
+
+### Resumen de Archivos Clave
+
+#### 1. Application Development
+- **Código:** [`implementation/app.py`](implementation/app.py) - Flask app con Prometheus + OpenTelemetry
+- **Features:** Counter, Histogram, Gauge metrics; distributed tracing; structured logging
+
+#### 2. Kubernetes Deployment  
+- **Dockerfile:** [`implementation/Dockerfile`](implementation/Dockerfile) - Multi-stage build con health checks
+- **Deployment:** [`implementation/deployment.yaml`](implementation/deployment.yaml) - 3 replicas, probes, PVC
+- **Service:** [`implementation/service.yaml`](implementation/service.yaml) - NodePort con Prometheus annotations
+
+#### 3. Prometheus Integration
+- **Config:** [`implementation/prometheus.yaml`](implementation/prometheus.yaml) - 5 scrape jobs con Kubernetes service discovery
+
+#### 4. Grafana Dashboards (Exported JSON)
+Ver detalles abajo ↓
+
+#### 5. Alertmanager Rules
+Ver detalles abajo ↓
+
+---
+
+### Dashboards de Grafana Exportados
+Los siguientes dashboards están disponibles en formato JSON para importación directa en Grafana:
+
+- **Golden Signals Dashboard:** [`dashboards/golden-signals-dashboard.json`](dashboards/golden-signals-dashboard.json)
+  - 7 paneles cubriendo los 4 Golden Signals (Latencia, Tráfico, Errores, Saturación)
+  - Datasources: Prometheus + Loki
+  - Métricas: `otel_collector_span_metrics_duration_milliseconds`, `container_network_*`, `container_cpu_*`, `container_fs_*`
+
+- **Application Metrics Dashboard:** [`dashboards/application-metrics-dashboard.json`](dashboards/application-metrics-dashboard.json)
+  - 5 paneles con métricas custom del Prometheus Client Library
+  - Métricas: `http_requests_total`, `http_request_duration_seconds`, `goo_function_calls_total`
+  - Showcases instrumentation from Exercise 11
+
+- **Infrastructure Dashboard:** [`dashboards/infrastructure-dashboard.json`](dashboards/infrastructure-dashboard.json)
+  - 5 paneles de infraestructura Kubernetes
+  - Métricas: Pods por namespace, CPU/Memory por pod, Network I/O, Disk I/O
+
+### Configuración de Alertmanager
+Configuración completa de alerting con Prometheus y Alertmanager:
+
+- **Alertmanager Config:** [`alerting/alertmanager-config.yaml`](alerting/alertmanager-config.yaml)
+  - 6 receivers (default, critical, latency, error, saturation, infrastructure)
+  - Routing rules por severidad y tipo de alerta
+  - 3 reglas de inhibición para suprimir alertas redundantes
+  - Integración con email y webhooks
+
+- **Prometheus Alert Rules:** [`alerting/alert-rules.yaml`](alerting/alert-rules.yaml)
+  - **Latency alerts:** HighLatency (p95 > 0.5s), CriticalLatency (p99 > 1.0s)
+  - **Traffic alerts:** TrafficSpike (>1000 req/s), TrafficDrop (<10 req/s)
+  - **Error alerts:** HighErrorRate (>5%), NetworkErrors, ApplicationErrors
+  - **Saturation alerts:** HighCPUUsage (>0.8 cores), HighMemoryUsage (>512MB), HighDiskUsage
+  - **Infrastructure alerts:** PodDown, PodRestarting, ServiceDown
+
+- **Alertmanager Deployment:** [`alerting/alertmanager-deployment.yaml`](alerting/alertmanager-deployment.yaml)
+  - Kubernetes Deployment + Service (NodePort 30093)
+  - Alertmanager v0.26.0
+  - Probes de liveness y readiness
+
+---
+
 ## Desarrollo de Exercises por Orden
 
 A continuación se documenta el código, YAMLs, Dockerfiles y procesos de deployment de cada exercise en orden secuencial.
