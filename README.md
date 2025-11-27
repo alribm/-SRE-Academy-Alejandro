@@ -1,4 +1,4 @@
-# -SRE-Academy-Alejandro
+# SRE-Academy-Alejandro
 
 ## Descripción del Proyecto
 
