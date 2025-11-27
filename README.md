@@ -97,7 +97,7 @@ El SRE Academy es una iniciativa interna de IBM diseñada para formar profesiona
 
 ---
 
-## Capturas de Pantalla
+## Evidencia del Proyecto
 
 ### Pods on Kubernetes
 <img src="images/kubernetes-pods.png" width="400"/>
@@ -112,17 +112,12 @@ El SRE Academy es una iniciativa interna de IBM diseñada para formar profesiona
   <tr>
     <td><img src="images/grafana-4.png" width="400"/></td>
     <td><img src="images/grafana-5.png" width="400"/></td>
-    <td><img src="images/grafana-6.png" width="400"/></td>
+    <td><img src="images/grafana-7.png" width="400"/></td>
   </tr>
   <tr>
-    <td><img src="images/grafana-7.png" width="400"/></td>
     <td><img src="images/grafana-8.png" width="400"/></td>
     <td><img src="images/grafana-9.png" width="400"/></td>
-  </tr>
-  <tr>
     <td><img src="images/grafana-10.png" width="400"/></td>
-    <td><img src="images/grafana-11.png" width="400"/></td>
-    <td></td>
   </tr>
 </table>
 
@@ -154,11 +149,75 @@ El SRE Academy es una iniciativa interna de IBM diseñada para formar profesiona
   </tr>
 </table>
 
+### Logs en Loki
+<table>
+  <tr>
+    <td><img src="images/loki-1.png" width="400"/></td>
+    <td><img src="images/loki-2.png" width="400"/></td>
+    <td></td>
+  </tr>
+</table>
+
 ### AWX Dashboard
 <img src="images/awx-dashboard.png" width="400"/>
 
 ### ArgoCD Dashboard
 <img src="images/argocd-dashboard.png" width="400"/>
+
+---
+
+## Scripts Personalizados
+
+Durante el programa, desarrollé varios scripts de automatización para facilitar tareas comunes del proyecto y así ahorrar un poquito de tiempo:
+
+### Script 1: apply-all-services.sh
+<img src="images/script-1.png" width="600"/>
+
+**Descripción:**
+Este script automatiza el inicio de servicios en un clúster de Kubernetes aplicando distintos manifiestos en un orden lógico. Se encarga de desplegar almacenamiento, la aplicación base y varias herramientas de observabilidad y monitoreo (Jaeger, Prometheus, Grafana, Loki/Promtail). Al final muestra un mensaje confirmando que todos los manifiestos fueron aplicados correctamente
+
+
+**Tecnologías:** 
+- Bash (Shell Script) → lenguaje de scripting para ejecutar comandos de forma secuencial.
+- Kubernetes (kubectl) → CLI para aplicar manifiestos YAML y gestionar recursos en el clúster.
+
+
+**Uso:**
+```bash
+./apply-all-services.sh
+```
+
+**Características:**
+- Orden lógico: aplica primero el almacenamiento, luego la aplicación base y finalmente las herramientas de monitoreo/logging.
+- Automatización: reduce la necesidad de ejecutar múltiples comandos manualmente.
+- Claridad: incluye comentarios en español que documentan cada sección.
+- Feedback inmediato: imprime un mensaje final confirmando que todos los manifiestos fueron aplicados
+
+---
+
+### Script 2: stop-all-services.sh
+<img src="images/script-2.png" width="600"/>
+
+**Descripción:** El script automatiza el apagado de servicios desplegados en Kubernetes y la gestión del entorno de Minikube. Primero elimina los manifiestos aplicados (storage, deployment, Jaeger, Prometheus, Grafana, Loki/Promtail), espera unos segundos para liberar recursos y luego ofrece confirmaciones interactivas para detener o eliminar Minikube.
+
+
+**Tecnologías:** 
+- Bash (Shell Script) → lenguaje de scripting para automatizar tareas en Linux/Unix.
+- Kubernetes (kubectl) → herramienta CLI para aplicar y eliminar manifiestos de servicios.
+- Minikube → entorno local de Kubernetes que se puede detener o eliminar desde el script.
+
+
+**Uso:**
+```bash
+./stop-all-services.sh
+```
+
+**Características:**
+- Automatización: elimina servicios en orden inverso para evitar conflictos de dependencias.
+- Interactividad: incluye confirmaciones yes/no antes de detener o borrar Minikube.
+- Robustez: añade un sleep para dar tiempo a que los recursos se liberen.
+- Flexibilidad: permite elegir entre detener Minikube (mantener configuración) o eliminarlo completamente (limpieza total).
+- Mensajes claros: imprime estados y resultados de cada acción para mayor transparencia.
 
 ---
 
